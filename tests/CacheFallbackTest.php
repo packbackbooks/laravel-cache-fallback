@@ -12,7 +12,7 @@ class CacheFallbackTest extends TestCase
 
     protected $application;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->application = $this->createApplication();

@@ -4,6 +4,8 @@ namespace Fingo\LaravelCacheFallback;
 
 use Exception;
 use Illuminate\Cache\CacheManager;
+use Illuminate\Support\Facades\Log;
+use Predis\CommunicationException;
 
 /**
  * Class CacheFallback
@@ -11,6 +13,38 @@ use Illuminate\Cache\CacheManager;
  */
 class CacheFallback extends CacheManager
 {
+    /**
+     * Dynamically call the default driver instance.
+     *
+     * @param  string  $method
+     * @param  array  $parameters
+     * @return mixed
+     */
+    public function __call($method, $parameters)
+    {
+        $attempts = config('cache_fallback.attempts_before_fallback');
+        $interval = config('cache_fallback.interval_between_attempts');
+        // We have two levels of try-catches since we are catching different exception types
+        try {
+            try {
+                return parent::__call($method, $parameters);
+            } catch (CommunicationException $e) {
+                // Only retry if we got a connection error, to avoid other errors from doing unwanted retries
+                return retry($attempts, function () use ($method, $parameters) {
+                    return parent::__call($method, $parameters);
+                }, $interval);
+            }
+        } catch (Exception $e) {
+            report($e);
+
+            if ($newDriver = $this->nextDriver($this->getDefaultDriver())) {
+                return $this->store($newDriver)->$method(...$parameters);
+            }
+            // Throw the exception if we have exhaused all our options
+            throw $e;
+        }
+    }
+
     /**
      * Resolve the given store.
      *
@@ -20,12 +54,19 @@ class CacheFallback extends CacheManager
      */
     protected function resolve($name)
     {
+        $attempts = config('cache_fallback.attempts_before_fallback');
+        $interval = config('cache_fallback.interval_between_attempts');
         try {
-            return parent::resolve($name);
+            return retry($attempts, function () use ($name) {
+                return parent::resolve($name);
+            }, $interval);
         } catch (Exception $e) {
+            report($e);
+
             if ($newDriver = $this->nextDriver($name)) {
                 return $this->resolve($newDriver);
             }
+            // Throw the exception if we have exhaused all our options
             throw $e;
         }
     }

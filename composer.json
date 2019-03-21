@@ -1,5 +1,5 @@
 {
-  "name": "packbackbooks/laravel-cache-fallback",
+  "name": "fingo/laravel-cache-fallback",
   "type": "library",
   "description": "Provides fallback mechanisms for cache handlers",
   "keywords": [

@@ -56,6 +56,7 @@ class CacheFallback extends CacheManager
     {
         $attempts = config('cache_fallback.attempts_before_fallback');
         $interval = config('cache_fallback.interval_between_attempts');
+        // Handle errors during initalization of the cache store
         try {
             return retry($attempts, function () use ($name) {
                 return parent::resolve($name);

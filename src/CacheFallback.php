@@ -22,8 +22,22 @@ class CacheFallback extends CacheManager
      */
     public function __call($method, $parameters)
     {
-        $attempts = config('cache_fallback.attempts_before_fallback');
-        $interval = config('cache_fallback.interval_between_attempts');
+        if (config('cache_fallback.fallback_on_call_failure')) {
+            return $this->callFallback($method, $parameters);
+        }
+        return parent::__call($method, $parameters);
+    }
+
+    /**
+     * Handle fallbacks on __call if exceptions occur
+     *
+     * @param  string  $method
+     * @param  array  $parameters
+     * @return mixed
+     */
+    private function callFallback($method, $parameters)
+    {
+
         // We have two levels of try-catches since we are catching different exception types
         try {
             try {
@@ -31,9 +45,10 @@ class CacheFallback extends CacheManager
             } catch (CommunicationException $e) {
                 // Only retry if we got a connection error, to avoid other errors from doing unwanted retries
                 // We are subtracting from $attempts since we already have completed 1 attempt on line 30
-                return retry($attempts-1, function () use ($method, $parameters) {
+                $attempts = config('cache_fallback.attempts_before_fallback') - 1;
+                return retry($attempts, function () use ($method, $parameters) {
                     return parent::__call($method, $parameters);
-                }, $interval);
+                }, config('cache_fallback.interval_between_attempts'));
             }
         } catch (Exception $e) {
             report($e);
@@ -55,13 +70,14 @@ class CacheFallback extends CacheManager
      */
     protected function resolve($name)
     {
-        $attempts = config('cache_fallback.attempts_before_fallback');
-        $interval = config('cache_fallback.interval_between_attempts');
         // Handle errors during initalization of the cache store
         try {
-            return retry($attempts, function () use ($name) {
-                return parent::resolve($name);
-            }, $interval);
+            return retry(
+                config('cache_fallback.attempts_before_fallback'),
+                function () use ($name) {
+                    return parent::resolve($name);
+                }, config('cache_fallback.interval_between_attempts')
+            );
         } catch (Exception $e) {
             report($e);
 

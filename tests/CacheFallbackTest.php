@@ -29,6 +29,8 @@ class CacheFallbackTest extends TestCase
     {
         $app['config']->set('cache.default', 'redis');
         $app['config']->set('app.key', 'hh8oYDaXmHZQ6uNhaq7HWtpDDucMtD5C');
+        $app['config']->set('cache_fallback.attempts_before_fallback', 3);
+        $app['config']->set('cache_fallback.fallback_on_call_failure', true);
     }
 
     protected function getPackageProviders($app)

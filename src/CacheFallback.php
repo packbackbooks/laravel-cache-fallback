@@ -30,7 +30,8 @@ class CacheFallback extends CacheManager
                 return parent::__call($method, $parameters);
             } catch (CommunicationException $e) {
                 // Only retry if we got a connection error, to avoid other errors from doing unwanted retries
-                return retry($attempts, function () use ($method, $parameters) {
+                // We are subtracting from $attempts since we already have completed 1 attempt on line 30
+                return retry($attempts-1, function () use ($method, $parameters) {
                     return parent::__call($method, $parameters);
                 }, $interval);
             }
@@ -97,7 +98,7 @@ class CacheFallback extends CacheManager
     protected function createRedisDriver(array $config)
     {
         $redisDriver = parent::createRedisDriver($config);
-        $redisDriver->get('test');
+        $redisDriver->connection()->ping();
         return $redisDriver;
     }
 

@@ -11,12 +11,18 @@ use Predis\Connection\ConnectionException;
 class CacheFallbackTest extends TestCase
 {
 
-    protected $application;
+    protected $application, $connectionException;
 
     public function setUp(): void
     {
         parent::setUp();
         $this->application = $this->createApplication();
+        $this->connectionException = new ConnectionException(
+            Mockery::mock('Predis\Connection\AbstractConnection'),
+            'message',
+            1,
+            null
+        );
     }
 
     protected function getEnvironmentSetUp($app)
@@ -46,7 +52,7 @@ class CacheFallbackTest extends TestCase
      * @runInSeparateProcess
      * @preserveGlobalState disabled
      */
-    public function testRetryCalls()
+    public function testRetryCallsAndSucceed()
     {
         $mock = Mockery::mock('overload:Predis\Client');
         $mock->shouldReceive('ping')->andReturn(true);
@@ -57,14 +63,33 @@ class CacheFallbackTest extends TestCase
             ->andThrow(new \Exception) // done since we can't do $mock->_throw = true directly
             // This will return two connection exceptions, but then succeed on the third time
             ->andReturn(
-                new ConnectionException(Mockery::mock('Predis\Connection\AbstractConnection'), 'message', 1, null),
-                new ConnectionException(Mockery::mock('Predis\Connection\AbstractConnection'), 'message', 1, null),
+                $this->connectionException,
+                $this->connectionException,
                 serialize($desiredResult)
             )->times(3);
 
         $cache = new CacheFallback($this->application);
 
         $this->assertEquals($desiredResult, $cache->get('test'));
+    }
+
+    /**
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
+     */
+    public function testRetryCallsAndFail()
+    {
+        $mock = Mockery::mock('overload:Predis\Client');
+        $mock->shouldReceive('ping')->andReturn(true);
+
+        $mock->shouldReceive('get')
+            ->andThrow($this->connectionException)
+            ->times(3);
+
+        $cache = new CacheFallback($this->application);
+
+        // Assert null since we moved on to the next driver and don't have it
+        $this->assertNull($cache->get('test'));
     }
 
     /**

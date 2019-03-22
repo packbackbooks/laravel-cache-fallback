@@ -34,6 +34,7 @@ class CacheFallbackServiceProvider extends CacheServiceProvider
     public function register()
     {
         $this->mergeConfigFrom(__DIR__ . '/config/cache_fallback.php', 'cache_fallback');
+
         $this->app->singleton('cache', function ($app) {
             return new CacheFallback($app);
         });
@@ -45,7 +46,5 @@ class CacheFallbackServiceProvider extends CacheServiceProvider
         $this->app->singleton('memcached.connector', function () {
             return new MemcachedConnector;
         });
-
-        $this->registerCommands();
     }
 }

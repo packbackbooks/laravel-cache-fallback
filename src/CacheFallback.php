@@ -37,7 +37,6 @@ class CacheFallback extends CacheManager
      */
     private function callFallback($method, $parameters)
     {
-
         // We have two levels of try-catches since we are catching different exception types
         try {
             try {

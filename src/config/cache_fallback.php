@@ -17,7 +17,6 @@ return [
         'redis',
         'memcached',
         'database',
-        'cookie',
         'file',
         'array'
     ],
@@ -34,7 +33,7 @@ return [
     | fallback occurs.
     |
     */
-    'attempts_before_fallback' => 0,
+    'attempts_before_fallback' => 1,
 
     /*
     |--------------------------------------------------------------------------

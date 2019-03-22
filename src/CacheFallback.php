@@ -43,11 +43,14 @@ class CacheFallback extends CacheManager
                 return parent::__call($method, $parameters);
             } catch (CommunicationException $e) {
                 // Only retry if we got a connection error, to avoid other errors from doing unwanted retries
-                // We are subtracting from $attempts since we already have completed 1 attempt on line 30
+                // We are subtracting from $attempts since we already have completed 1 attempt in the first try-try
                 $attempts = config('cache_fallback.attempts_before_fallback') - 1;
-                return retry($attempts, function () use ($method, $parameters) {
-                    return parent::__call($method, $parameters);
-                }, config('cache_fallback.interval_between_attempts'));
+                if ($attempts > 0) {
+                    return retry($attempts, function () use ($method, $parameters) {
+                        return parent::__call($method, $parameters);
+                    }, config('cache_fallback.interval_between_attempts'));
+                }
+                throw $e;
             }
         } catch (Exception $e) {
             report($e);

@@ -53,7 +53,7 @@ class CacheFallback extends CacheManager
                 throw $e;
             }
         } catch (Exception $e) {
-            report($e);
+            Log::error($e);
 
             if ($newDriver = $this->nextDriver($this->getDefaultDriver())) {
                 return $this->store($newDriver)->$method(...$parameters);
@@ -81,7 +81,7 @@ class CacheFallback extends CacheManager
                 }, config('cache_fallback.interval_between_attempts')
             );
         } catch (Exception $e) {
-            report($e);
+            Log::error($e);
 
             if ($newDriver = $this->nextDriver($name)) {
                 return $this->resolve($newDriver);
